@@ -1,1 +1,6 @@
-See main ReadME for installation instructions.
+Install Instructions
+Install a forwarder on the PCs which are running League of Legends
+Run `Set-ExecutionPolicy RemoteSigned` on powershell
+Save the input script specified above in a file called callLeagueClientApi.ps1
+Add the powershell stanza to the inputs.conf file on the forwarder, as well as the props.conf file in $SPLUNK_HOME/etc/system/local
+Restart the forwarder
