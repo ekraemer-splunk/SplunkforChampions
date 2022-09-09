@@ -1,0 +1,407 @@
+<form theme="dark">
+  <label>Historic Games</label>
+  <!-- SHOP ANNOTATION DEBUG -->
+  <!-- SUMMARY SELECTION TABLE -->
+  <!--KDA-->
+  <!-- GOLD OVER TIME -->
+  <!--CHAMPION STATS-->
+  <fieldset submitButton="false">
+    <input type="time" token="meta_time">
+      <label></label>
+      <default>
+        <earliest>@w0</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="radio" token="showItems">
+      <label></label>
+      <choice value="1">Hide Items</choice>
+      <choice value="0">Show Items</choice>
+      <default>1</default>
+      <initialValue>1</initialValue>
+    </input>
+    <input type="dropdown" token="player">
+      <label>Player</label>
+      <fieldForLabel>player</fieldForLabel>
+      <fieldForValue>player</fieldForValue>
+      <search>
+        <query>index=* source="powershell://LeagueClientAPI" activePlayer.summonerName=Splunk*
+| table activePlayer.summonerName
+| dedup activePlayer.summonerName
+| rename activePlayer.summonerName as player</query>
+        <earliest>0</earliest>
+        <latest></latest>
+      </search>
+      <default>Splunk1conf22</default>
+      <initialValue>Splunk1conf22</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>index=* source=test1_LeagueMatchv5Api
+| fields championName, gameCreation, gameId, gameEndTimestamp, summonerName
+| rename gameCreation as unixStart
+| rename gameEndTimestamp as unixEnd
+| eval starttime= strftime(unixStart/pow(10,3),"%m/%d/%Y:%H:%M:%S")
+| eval starttime_summary = strftime(unixStart/pow(10,3),"%m/%d/%Y")
+| eval endtime= strftime(unixEnd/pow(10,3),"%m/%d/%Y:%H:%M:%S")
+| eval info = championName + ", " + starttime_summary
+| dedup info
+| table info, championName, gameId, starttime, endtime, summonerName
+| search summonerName = $player$
+| rename info as Summary, championName as Champion, gameId as ID, starttime as "Exact Starting Time", endtime as "Exact Ending Time"
+| rex field=Champion mode=sed "s/(?&lt;capital&gt;[A-Z]+)/ \1/g s/_//g"
+| eval Champion=trim(Champion)</query>
+          <earliest>$meta_time.earliest$</earliest>
+          <latest>$meta_time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">3</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <set token="gameId">$row.ID$</set>
+          <set token="starttime">$row.Exact Starting Time$</set>
+          <set token="endtime">$row.Exact Ending Time$</set>
+          <set token="champname">$row.Champion$</set>
+          <set token="summoner">$row.summonerName$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Kills</title>
+      <single>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$  | spath path=allPlayers{} output=x  | mvexpand x  | spath input=x  | fields - activePlayer*, allPlayers*, items{}.raw*  | search championName="$champname$"| stats max("scores.kills")</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051", "0x0877a6", "0xf8be34", "0xf1813f", "0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Deaths</title>
+      <single>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$  | spath path=allPlayers{} output=x  | mvexpand x  | spath input=x  | fields - activePlayer*, allPlayers*, items{}.raw*  | search championName="$champname$"| stats max("scores.deaths")</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051", "0x0877a6", "0xf8be34", "0xf1813f", "0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Assists</title>
+      <single>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$  | spath path=allPlayers{} output=x  | mvexpand x  | spath input=x  | fields - activePlayer*, allPlayers*, items{}.raw*  | search championName="$champname$"| stats max("scores.assists")</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">116</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051", "0x0877a6", "0xf8be34", "0xf1813f", "0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Player Score</title>
+      <chart>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$
+| spath path=allPlayers{} output=x  
+| mvexpand x  
+| spath input=x  
+| fields - allPlayers*, items{}.raw*  
+| search championName="$champname$"
+| eval PlayerScore = (3*'scores.kills' - 'scores.deaths' + 1.5*'scores.assists' + 0.02*'scores.creepScore')*100
+| timechart avg(PlayerScore) as PlayerScore span=5s
+| delta PlayerScore as "Rate of Change"
+| rename PlayerScore as "Score w/o Damage"</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <search type="annotation">
+          <query>
+          index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=Splunk1conf22 earliest=$starttime$ latest= $endtime$
+| spath path=allPlayers{} output=x
+| mvexpand x
+| spath input=x
+| search championName="$champname$"
+| table _time, items{}.displayName
+| rename items{}.* as *
+| dedup displayName
+| sort _time
+| eval annotation_label = displayName
+| eval annotation_category = "Item Purchase or Sell"
+| eval _time = if (1=$showItems$, "", _time)
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.scale">log</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.overlayFields">PlayerScore,"Rate of Change"</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisStart</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Resources Over Time</title>
+      <chart>
+        <search type="annotation">
+          <query>
+          index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=Splunk1conf22 earliest=$starttime$ latest= $endtime$
+| spath path=allPlayers{} output=x
+| mvexpand x
+| spath input=x
+| search championName="$champname$"
+| table _time, items{}.displayName
+| rename items{}.* as *
+| dedup displayName
+| sort _time
+| eval annotation_label = displayName
+| eval annotation_category = "Item Purchase or Sell"
+| eval _time = if (1=$showItems$, "", _time)
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$  | spath path=allPlayers{} output=x  | mvexpand x  | spath input=x  
+| fields - allPlayers*, items{}.raw*  
+| search championName="$champname$"
+| table _time activePlayer.currentGold activePlayer.championStats.currentHealth activePlayer.championStats.resourceValue
+| timechart avg(*) span=5s
+| rename avg(activePlayer.championStats.*) as *, avg(activePlayer.*) as *</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <!--GOLD OVER TIME ANNOTATIONS-->
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">0</option>
+        <option name="trellis.size">large</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Player Stats</title>
+      <chart>
+        <search type="annotation">
+          <query>
+          index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=Splunk1conf22 earliest=$starttime$ latest= $endtime$
+| spath path=allPlayers{} output=x
+| mvexpand x
+| spath input=x
+| search championName="$champname$"
+| table _time, items{}.displayName
+| rename items{}.* as *
+| dedup displayName
+| sort _time
+| eval annotation_label = displayName
+| eval annotation_category = "Item Purchase or Sell"
+| eval _time = if (1=$showItems$, "", _time)
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$
+| fields activePlayer.championStats.*
+| fields - _raw, activePlayer.championStats.bonus*
+| table *
+| rename activePlayer.championStats.* as *</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">collapsed</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">469</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">0</option>
+        <option name="trellis.size">small</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Item History</title>
+      <table>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$summoner$ earliest=$starttime$ latest= $endtime$
+| spath path=allPlayers{} output=x
+| mvexpand x
+| spath input=x
+| table _time, championName, items{}*
+| fields - activePlayer*, allPlayers*, items{}.raw*
+| rename items{}.* as *
+| search championName="$champname$"
+| dedup displayName
+| fields - championName, canUse, consumable itemID
+| sort _time</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">3</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

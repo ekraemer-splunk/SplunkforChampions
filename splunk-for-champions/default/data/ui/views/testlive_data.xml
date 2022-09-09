@@ -1,0 +1,144 @@
+<form theme="dark">
+  <label>Live Data</label>
+  <fieldset submitButton="false">
+    <input type="time" token="lookback_time">
+      <label></label>
+      <default>
+        <earliest>rt-5m</earliest>
+        <latest>rt</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="player">
+      <label>Player</label>
+      <fieldForLabel>player</fieldForLabel>
+      <fieldForValue>player</fieldForValue>
+      <search>
+        <query>index=* source="powershell://LeagueClientAPI" activePlayer.summonerName=Splunk*
+| table activePlayer.summonerName
+| dedup activePlayer.summonerName
+| rename activePlayer.summonerName as player
+| sort player</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <choice value="*">All Players</choice>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Player Score</title>
+      <chart>
+        <search type="annotation">
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=Splunk1conf22 earliest=$starttime$ latest= $endtime$
+| spath path=allPlayers{} output=x
+| mvexpand x
+| spath input=x
+| search championName=$champname$
+| table _time, items{}.displayName
+| rename items{}.* as *
+| dedup displayName
+| sort _time
+| eval annotation_label = displayName
+| eval annotation_category = "Item Purchase or Sell"
+| eval _time = if (1=$showItems$, "", _time)</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$player$
+| spath path=allPlayers{} output=x  
+| mvexpand x  
+| spath input=x  
+| fields - allPlayers*, items{}.raw*
+| search summonerName = $player$
+| search summonerName = Splunk*
+| eval PlayerScore = (3*'scores.kills' - 'scores.deaths' + 1.5*'scores.assists' + 0.02*'scores.creepScore')*100
+| timechart avg(PlayerScore) as PlayerScore span=5s by summonerName</query>
+          <earliest>$lookback_time.earliest$</earliest>
+          <latest>$lookback_time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.scale">log</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.overlayFields">PlayerScore,"Rate of Change"</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisStart</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Ability Data</title>
+      <chart>
+        <search>
+          <query>index=* source="powershell://LeagueClientAPI" "activePlayer.summonerName"=$player$
+| timechart avg(activePlayer.championStats.*) as * by "activePlayer.summonerName"</query>
+          <earliest>$lookback_time.earliest$</earliest>
+          <latest>$lookback_time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">collapsed</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">0</option>
+        <option name="trellis.size">small</option>
+        <option name="trellis.splitBy">_aggregation</option>
+      </chart>
+    </panel>
+  </row>
+</form>

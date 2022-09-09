@@ -1,0 +1,17 @@
+On fresh install, please run chmod +x caller.py
+
+######
+
+As of the current release of the app, users are required to update their Riot API Key manually
+every 24 hours. We are working on getting cleared by Riot Game to obtain a more permanent API key. 
+
+As of now, select one of the players which will be in the training games and note their League of Legends 
+login credentials. Navigate to developer.riotgames.com, and log in with said credentials
+
+Navigate to the Development API section, and copy the API key.
+
+Open the caller.py script, and replace the APIKey on line 10 with the copied value
+
+#####
+
+9/1/22: Riot changed their API endpoint for puuid. We no longer have permissions for the byRiotID endpoint, but we can still obtain the Puuid by calling the byName endpoint under summoner v4
